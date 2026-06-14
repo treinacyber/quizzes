@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz de Conscientização em Segurança da Informação</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Arial,sans-serif; }
+  body {
+    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:20px; color:#fff;
+  }
+  .container {
+    background:#fff; color:#333; max-width:720px; width:100%;
+    border-radius:18px; box-shadow:0 12px 45px rgba(0,0,0,.4); padding:40px;
+  }
+  h1 { text-align:center; color:#203a43; margin-bottom:10px; font-size:26px; }
+  .subtitulo { text-align:center; color:#666; margin-bottom:25px; font-size:14px; }
+  .barra-progresso { background:#e0e0e0; border-radius:10px; height:12px; margin-bottom:25px; overflow:hidden; }
+  .progresso { background:linear-gradient(90deg,#2c5364,#43cea2); height:100%; width:0%; transition:width .5s ease; }
+  .pergunta { font-size:20px; font-weight:600; margin-bottom:20px; line-height:1.4; }
+  .opcoes { display:flex; flex-direction:column; gap:12px; }
+  .opcao { background:#f5f7fa; border:2px solid #e0e0e0; border-radius:12px; padding:15px; cursor:pointer; transition:all .2s; font-size:16px; }
+  .opcao:hover { border-color:#2c5364; background:#eef5f4; transform:translateY(-2px); }
+  .opcao.correta { background:#d4edda; border-color:#28a745; }
+  .opcao.errada { background:#f8d7da; border-color:#dc3545; }
+  .opcao.desabilitada { pointer-events:none; }
+  .feedback { margin-top:18px; padding:15px; border-radius:12px; font-size:15px; display:none; line-height:1.5; }
+  .feedback.show { display:block; }
+  .feedback.ok { background:#d4edda; color:#155724; }
+  .feedback.no { background:#f8d7da; color:#721c24; }
+  .btn { background:#2c5364; color:#fff; border:none; padding:15px 30px; border-radius:12px; font-size:16px; cursor:pointer; margin-top:20px; width:100%; transition:.2s; font-weight:600; }
+  .btn:hover { background:#1b333d; }
+  .btn:disabled { background:#ccc; cursor:not-allowed; }
+  .btn-sec { background:#6c757d; } .btn-sec:hover { background:#565e64; }
+  .resultado { text-align:center; }
+  .pontuacao { font-size:50px; font-weight:bold; color:#2c5364; margin:20px 0; }
+  .mensagem-final { font-size:18px; margin-bottom:20px; line-height:1.5; }
+  .contador { text-align:center; color:#888; font-size:14px; margin-bottom:10px; }
+  .campo { width:100%; padding:14px; font-size:16px; border:2px solid #e0e0e0; border-radius:12px; margin:10px 0; }
+  .campo:focus { outline:none; border-color:#2c5364; }
+  .status { margin-top:15px; font-size:14px; min-height:20px; }
+  .status.erro { color:#dc3545; } .status.sucesso { color:#28a745; }
+  .loader { display:inline-block; width:18px; height:18px; border:3px solid #ccc; border-top-color:#2c5364; border-radius:50%; animation:girar .8s linear infinite; vertical-align:middle; margin-right:8px; }
+  @keyframes girar { to { transform:rotate(360deg); } }
+
+  /* CERTIFICADO */
+  .certificado { border:10px solid #2c5364; border-radius:14px; padding:40px 30px; text-align:center; background:#fdfdfd; color:#333; position:relative; }
+  .certificado::before { content:""; position:absolute; inset:12px; border:2px solid #a8c0bb; border-radius:8px; pointer-events:none; }
+  .certificado .selo { font-size:55px; margin-bottom:10px; }
+  .certificado h2 { color:#203a43; font-size:24px; letter-spacing:1px; }
+  .certificado .linha { color:#888; font-size:14px; margin-bottom:25px; }
+  .certificado .nome { font-size:28px; font-weight:bold; color:#2c5364; border-bottom:2px solid #ccc; display:inline-block; padding:5px 30px; margin:10px 0; }
+  .certificado .texto { font-size:16px; line-height:1.6; margin:15px 0; color:#555; }
+  .certificado .rodape { display:flex; justify-content:space-between; margin-top:35px; font-size:13px; color:#777; gap:20px; }
+  .certificado .rodape div { flex:1; border-top:1px solid #999; padding-top:6px; }
+
+  @media print { body{background:#fff;padding:0;} .container{box-shadow:none;padding:0;} .no-print{display:none!important;} }
+  @media (max-width:600px){ .container{padding:25px;} h1{font-size:22px;} .pergunta{font-size:18px;} .certificado .nome{font-size:22px;} }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ===== TELA INICIAL ===== -->
+  <div id="tela-inicial">
+    <h1>🔐 Quiz de Conscientização em Segurança da Informação</h1>
+    <p class="subtitulo">Teste seus conhecimentos e receba seu certificado por e-mail!</p>
+    <p style="text-align:center;margin:15px 0;line-height:1.6;">
+      Responda às perguntas sobre boas práticas de segurança digital.
+      Ao concluir, você receberá um <strong>certificado</strong> no seu e-mail. 🏅
+    </p>
+    <input type="text" id="nome" class="campo" placeholder="Seu nome completo" maxlength="60">
+    <input type="email" id="email" class="campo" placeholder="Seu melhor e-mail">
+    <button class="btn" onclick="iniciarQuiz()">Começar Quiz 🚀</button>
+    <div class="status" id="status-inicial"></div>
+  </div>
+
+  <!-- ===== TELA DO QUIZ ===== -->
+  <div id="tela-quiz" style="display:none;">
+    <div class="barra-progresso"><div class="progresso" id="progresso"></div></div>
+    <p class="contador" id="contador"></p>
+    <p class="pergunta" id="pergunta"></p>
+    <div class="opcoes" id="opcoes"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn" id="btn-proxima" onclick="proximaPergunta()" disabled>Próxima</button>
+  </div>
+
+  <!-- ===== TELA DE RESULTADO ===== -->
+  <div id="tela-resultado" style="display:none;" class="resultado">
+    <h2 style="color:#203a43;">Quiz Concluído! 🎯</h2>
+    <div class="pontuacao" id="pontuacao"></div>
+    <p class="mensagem-final" id="mensagem-final"></p>
+    <button class="btn" onclick="mostrarCertificado()">📜 Ver Certificado</button>
+    <button class="btn btn-sec" onclick="reiniciarQuiz()">Refazer Quiz 🔄</button>
+  </div>
+
+  <!-- ===== TELA DO CERTIFICADO ===== -->
+  <div id="tela-certificado" style="display:none;">
+    <div class="certificado" id="certificado">
+      <div class="selo">🏅</div>
+      <h2>CERTIFICADO DE CONCLUSÃO</h2>
+      <p class="linha">Conscientização em Segurança da Informação</p>
+      <p class="texto">Certificamos que</p>
+      <div class="nome" id="cert-nome"></div>
+      <p class="texto">concluiu com êxito o treinamento, obtendo <strong id="cert-pontuacao"></strong>.</p>
+      <div class="rodape">
+        <div>Data: <span id="cert-data"></span></div>
+        <div>Equipe de Segurança da Informação</div>
+      </div>
+    </div>
+    <div class="status" id="status-email"></div>
+    <button class="btn no-print" onclick="imprimirCertificado()">🖨️ Salvar em PDF</button>
+    <button class="btn btn-sec no-print" onclick="reiniciarQuiz()">Voltar ao Início</button>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   🔧 1. CONFIGURAÇÃO - cole aqui a URL do seu Google Apps Script
+   (você vai gerar essa URL na PARTE 2 do tutorial)
+   ============================================================ */
+const URL_SCRIPT = "COLE_AQUI_A_URL_DO_APPS_SCRIPT";
+
+const NOTA_MINIMA = 70; // % mínima para "aprovado" (apenas muda a mensagem)
+
+/* ============================================================
+   ✏️ 2. BANCO DE PERGUNTAS - EDITE LIVREMENTE AQUI!
+   ------------------------------------------------------------
+   Para ADICIONAR pergunta: copie um bloco { ... } e cole.
+   Para REMOVER: apague o bloco inteiro.
+   "correta" = posição da resposta certa (começa em 0).
+   ============================================================ */
+const BANCO_PERGUNTAS = [
+  {
+    pergunta: "Qual destas é considerada uma senha forte?",
+    opcoes: ["123456", "senha123", "P@ss!2024#Xk9", "nome do seu pet"],
+    correta: 2,
+    explicacao: "Senhas fortes têm maiúsculas, minúsculas, números e símbolos, com 12+ caracteres."
+  },
+  {
+    pergunta: "Você recebe um e-mail urgente do 'banco' pedindo para clicar num link e confirmar a senha. O que fazer?",
+    opcoes: ["Clicar logo para não perder o prazo", "Acessar o site do banco digitando o endereço manualmente", "Responder com seus dados", "Encaminhar para colegas"],
+    correta: 1,
+    explicacao: "Isso é phishing! Bancos nunca pedem senha por e-mail. Acesse sempre o site oficial digitando o endereço."
+  },
+  {
+    pergunta: "O que é autenticação de dois fatores (2FA)?",
+    opcoes: ["Usar duas senhas", "Confirmar identidade com dois métodos (senha + código no celular)", "Logar em dois aparelhos", "Trocar a senha 2x por ano"],
+    correta: 1,
+    explicacao: "O 2FA cria uma camada extra: mesmo que roubem sua senha, falta o segundo fator."
+  },
+  {
+    pergunta: "É seguro reutilizar a mesma senha em vários sites?",
+    opcoes: ["Sim, facilita lembrar", "Sim, se for forte", "Não, se um site vazar, todas as contas ficam expostas", "Só em sites confiáveis"],
+    correta: 2,
+    explicacao: "Reutilizar senhas é arriscado. Use um gerenciador para criar senhas únicas."
+  },
+  {
+    pergunta: "Você acha um pen drive perdido no estacionamento da empresa. O que fazer?",
+    opcoes: ["Conectar para ver de quem é", "Levar para casa", "Não conectar e entregar à TI/Segurança", "Formatar e usar"],
+    correta: 2,
+    explicacao: "Pen drives desconhecidos podem ter malware (ataque de 'baiting'). Nunca conecte."
+  },
+  {
+    pergunta: "Segundo a LGPD, o que são dados pessoais sensíveis?",
+    opcoes: ["Apenas nome e e-mail", "Dados de saúde, religião, biometria, orientação sexual etc.", "Somente o CPF", "Endereço de trabalho"],
+    correta: 1,
+    explicacao: "Dados sensíveis exigem proteção redobrada: saúde, biometria, religião, opinião política etc."
+  },
+  {
+    pergunta: "Ao se ausentar da sua mesa de trabalho, você deve:",
+    opcoes: ["Deixar o PC desbloqueado", "Bloquear a tela (Win+L)", "Só desligar o monitor", "Deixar documentos abertos"],
+    correta: 1,
+    explicacao: "Política de 'mesa e tela limpas': sempre bloqueie o computador ao se ausentar."
+  }
+];
+
+/* ============================================================
+   ⚙️ 3. LÓGICA DO QUIZ (não precisa mexer)
+   ============================================================ */
+let perguntas=[], indice=0, pontos=0, dados={nome:"",email:""};
+
+function embaralhar(arr){
+  const c=[...arr];
+  for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}
+  return c;
+}
+function prepararPerguntas(){
+  perguntas = embaralhar(BANCO_PERGUNTAS).map(q=>{
+    const textoCerto=q.opcoes[q.correta];
+    const ops=embaralhar(q.opcoes);
+    return {pergunta:q.pergunta, opcoes:ops, correta:ops.indexOf(textoCerto), explicacao:q.explicacao};
+  });
+}
+function validarEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+function iniciarQuiz(){
+  const nome=document.getElementById('nome').value.trim();
+  const email=document.getElementById('email').value.trim();
+  const st=document.getElementById('status-inicial');
+  if(nome.length<3){ st.className='status erro'; st.textContent='⚠️ Digite seu nome completo.'; return; }
+  if(!validarEmail(email)){ st.className='status erro'; st.textContent='⚠️ Digite um e-mail válido.'; return; }
+  st.textContent='';
+  dados={nome,email};
+  prepararPerguntas(); indice=0; pontos=0;
+  document.getElementById('tela-inicial').style.display='none';
+  document.getElementById('tela-quiz').style.display='block';
+  mostrarPergunta();
+}
+function mostrarPergunta(){
+  const q=perguntas[indice];
+  document.getElementById('pergunta').textContent=q.pergunta;
+  document.getElementById('contador').textContent=`Pergunta ${indice+1} de ${perguntas.length}`;
+  document.getElementById('progresso').style.width=(indice/perguntas.length*100)+'%';
+  const div=document.getElementById('opcoes'); div.innerHTML='';
+  q.opcoes.forEach((op,i)=>{
+    const el=document.createElement('div'); el.className='opcao'; el.textContent=op;
+    el.onclick=()=>responder(i,el); div.appendChild(el);
+  });
+  const fb=document.getElementById('feedback'); fb.className='feedback'; fb.textContent='';
+  document.getElementById('btn-proxima').disabled=true;
+  document.getElementById('btn-proxima').textContent = (indice===perguntas.length-1)?'Ver Resultado 🎯':'Próxima';
+}
+function responder(i,el){
+  const q=perguntas[indice];
+  document.querySelectorAll('.opcao').forEach(o=>o.classList.add('desabilitada'));
+  const fb=document.getElementById('feedback');
+  if(i===q.correta){ el.classList.add('correta'); pontos++; fb.className='feedback show ok'; fb.textContent='✅ Correto! '+q.explicacao; }
+  else { el.classList.add('errada'); document.querySelectorAll('.opcao')[q.correta].classList.add('correta'); fb.className='feedback show no'; fb.textContent='❌ Incorreto. '+q.explicacao; }
+  document.getElementById('btn-proxima').disabled=false;
+}
+function proximaPergunta(){
+  indice++;
+  if(indice<perguntas.length) mostrarPergunta(); else mostrarResultado();
+}
+function mostrarResultado(){
+  document.getElementById('tela-quiz').style.display='none';
+  document.getElementById('tela-resultado').style.display='block';
+  document.getElementById('progresso').style.width='100%';
+  const pct=Math.round(pontos/perguntas.length*100);
+  document.getElementById('pontuacao').textContent=`${pontos} / ${perguntas.length}`;
+  let msg;
+  if(pct===100) msg='🏆 Perfeito! Você é um expert em segurança!';
+  else if(pct>=NOTA_MINIMA) msg=`👏 Parabéns, ${dados.nome.split(' ')[0]}! Você foi aprovado(a) com ${pct}%.`;
+  else msg=`⚠️ Você fez ${pct}%. Vale reforçar os conhecimentos e tentar novamente!`;
+  document.getElementById('mensagem-final').textContent=msg;
+}
+function mostrarCertificado(){
+  document.getElementById('tela-resultado').style.display='none';
+  document.getElementById('tela-certificado').style.display='block';
+  document.getElementById('cert-nome').textContent=dados.nome;
+  document.getElementById('cert-pontuacao').textContent=`${pontos} de ${perguntas.length} acertos`;
+  document.getElementById('cert-data').textContent=new Date().toLocaleDateString('pt-BR');
+  enviarRegistro(); // grava na planilha + envia e-mail
+}
+function enviarRegistro(){
+  const st=document.getElementById('status-email');
+  if(URL_SCRIPT.startsWith("COLE_AQUI")){ st.className='status erro'; st.textContent='⚠️ Configure a URL_SCRIPT para ativar planilha/e-mail.'; return; }
+  st.className='status'; st.innerHTML='<span class="loader"></span> Registrando e enviando certificado...';
+  const payload={
+    nome:dados.nome, email:dados.email,
+    pontuacao:pontos, total:perguntas.length,
+    percentual:Math.round(pontos/perguntas.length*100),
+    data:new Date().toLocaleString('pt-BR')
+  };
+  fetch(URL_SCRIPT,{
+    method:'POST',
+    mode:'no-cors', // necessário p/ Apps Script sem CORS
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(payload)
+  }).then(()=>{
+    st.className='status sucesso';
+    st.innerHTML='✅ Registrado! O certificado foi enviado para <strong>'+dados.email+'</strong>.';
+  }).catch(()=>{
+    st.className='status erro';
+    st.textContent='❌ Não foi possível enviar. Você ainda pode salvar o PDF abaixo.';
+  });
+}
+function imprimirCertificado(){ window.print(); }
+function reiniciarQuiz(){
+  ['tela-certificado','tela-resultado','tela-quiz'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('tela-inicial').style.display='block';
+  document.getElementById('status-email').textContent='';
+}
+</script>
+</body>
+</html>
